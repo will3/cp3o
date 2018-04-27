@@ -1,0 +1,19 @@
+#version 330 core
+
+in vec2 UV;
+
+uniform sampler2D renderedTexture;
+uniform bool renderDepth;
+
+varying vec2 vUv;
+
+out vec3 color;
+
+void main() {
+	if (renderDepth) {
+		float v = texture( renderedTexture, UV ).r;
+		color = vec3(v,v,v);
+	} else {
+	    color = texture( renderedTexture, UV ).rgb;
+	}
+}

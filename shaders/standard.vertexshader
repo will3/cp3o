@@ -1,0 +1,29 @@
+#version 330 core
+
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec3 normal;
+layout(location = 2) in ivec3 color;
+
+uniform mat4 MVP;
+uniform mat4 shadowMVP;
+uniform mat4 modelMatrix;
+uniform mat4 viewMatrix;
+
+out vec3 fragmentColor;
+out vec3 fragmentNormal;
+out vec4 shadowCoord;
+out vec3 position_worldspace;
+
+void main() {
+	gl_Position = MVP * vec4(position, 1);
+
+	mat3 normalMatrix = mat3(MVP);
+
+	position_worldspace = (modelMatrix * vec4(position, 1)).xyz;
+
+	fragmentNormal = (modelMatrix * vec4(normal, 0)).xyz;
+
+	fragmentColor = color / 255.0;
+
+	shadowCoord = shadowMVP * vec4(position, 1);
+}

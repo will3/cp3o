@@ -1,0 +1,99 @@
+#version 330 core
+
+in vec3 fragmentColor;
+in vec3 fragmentNormal;
+in vec4 shadowCoord;
+in vec3 position_worldspace;
+
+uniform vec3 light_dir;
+uniform float light_intensity;
+uniform vec3 ambient_light;
+uniform sampler2D tex;
+uniform bool hasShadowMap;
+uniform sampler2DShadow shadowMap;
+
+out vec3 color;
+
+vec2 poissonDisk[16] = vec2[]( 
+   vec2( -0.94201624, -0.39906216 ), 
+   vec2( 0.94558609, -0.76890725 ), 
+   vec2( -0.094184101, -0.92938870 ), 
+   vec2( 0.34495938, 0.29387760 ), 
+   vec2( -0.91588581, 0.45771432 ), 
+   vec2( -0.81544232, -0.87912464 ), 
+   vec2( -0.38277543, 0.27676845 ), 
+   vec2( 0.97484398, 0.75648379 ), 
+   vec2( 0.44323325, -0.97511554 ), 
+   vec2( 0.53742981, -0.47373420 ), 
+   vec2( -0.26496911, -0.41893023 ), 
+   vec2( 0.79197514, 0.19090188 ), 
+   vec2( -0.24188840, 0.99706507 ), 
+   vec2( -0.81409955, 0.91437590 ), 
+   vec2( 0.19984126, 0.78641367 ), 
+   vec2( 0.14383161, -0.14100790 ) 
+);
+
+float random(in vec3 seed, in float freq)
+{
+   // project seed on random constant vector
+   float dt = dot(seed * freq, vec3(53.1215, 21.1352, 9.1322));
+   // return only fractional part
+   return fract(sin(dt) * 2105.2354);
+}
+
+float randomAngle(in vec3 seed, in float freq)
+{
+   return random(seed, freq) * 6.283285;
+}
+
+void main()
+{
+	float cosTheta = clamp( dot(fragmentNormal, light_dir), 0, 1 );
+
+	float ambient_strength = 1.0;
+	float shadowMapWidth = 700;
+    float shadowStrength = 0.9;
+    float numSamples = 16;
+    float shadowRadius = 2;
+
+	vec3 ambient = ambient_light * ambient_strength * fragmentColor;
+
+	float bias = 0.005 * tan( acos(cosTheta) );
+	bias = clamp(bias, 0, 0.01);
+
+	bool test_shadow = false;
+
+	float shadowAmount = 0;
+
+	if (hasShadowMap) {
+
+		float angle = randomAngle(position_worldspace, 15);
+		float s = sin(angle);
+		float c = cos(angle);
+
+		for (int i = 0; i < numSamples; i ++) {
+
+			vec2 rotatedOffset = vec2(poissonDisk[i].x * c + poissonDisk[i].y * s, 
+				poissonDisk[i].x * -s + poissonDisk[i].y * c);
+
+			rotatedOffset = rotatedOffset / shadowMapWidth * shadowRadius;
+
+			float shadowTexel = texture( shadowMap, 
+				vec3( shadowCoord.xy + rotatedOffset, (shadowCoord.z - bias) / shadowCoord.w) );
+
+			shadowAmount += shadowStrength / numSamples * (1.0 - shadowTexel);
+
+		}
+
+	}
+
+	if (test_shadow) {
+		if (shadowAmount != 1.0) {
+			color = vec3(1.0, 0.0, 0.0);
+			return;
+		}
+	}
+
+	color = ambient +
+		fragmentColor * cosTheta * ( 1 - shadowAmount ) * light_intensity;
+}
