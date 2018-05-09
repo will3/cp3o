@@ -14,35 +14,38 @@ class UniformAttributes {
 	std::map<std::string, UniformAttribute> map;
 	std::map<std::string, GLuint> handles;
 public:
-	UniformAttributes() {
-		add(UniformAttribute("MVP"));
-	};
+    int programID = -1;
 
 	void add(UniformAttribute attribute) {
 		map[attribute.name] = attribute;
 	}
 
 	void set(std::string name, glm::mat4 v) {
+        loadHandleIfNeeded(name);
 		GLuint handle = handles[name];
 		glUniformMatrix4fv(handle, 1, GL_FALSE, &v[0][0]);
 	}
 
 	void set(std::string name, float x, float y, float z) {
+        loadHandleIfNeeded(name);
 		GLuint handle = handles[name];
 		glUniform3f(handle, x, y, z);
 	}
 	
-	void set(string name, bool v) {
+    void set(std::string name, bool v) {
+        loadHandleIfNeeded(name);
 		GLuint handle = handles[name];
 		glUniform1i(handle, v);
 	}
 
-	void set(string name, float v) {
+    void set(std::string name, float v) {
+        loadHandleIfNeeded(name);
 		GLuint handle = handles[name];
 		glUniform1f(handle, v);
 	}
 
 	void set_texture(std::string name, GLuint texture) {
+        loadHandleIfNeeded(name);
 		GLuint handle = handles[name];
 		UniformAttribute &attribute = map[name];
 
@@ -58,13 +61,15 @@ public:
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glUniform1i(handle, attribute.texture_position);
 	}
-
-	void get_handles(int programID) {
-		for (auto kv : map) {
-			std::string name = kv.first;
-			handles[name] = glGetUniformLocation(programID, name.c_str());
-		}
-	}
+    
+    void loadHandleIfNeeded(std::string name) {
+        if (programID == -1) {
+            throw std::runtime_error("program not loaded");
+        }
+        if (handles.find(name) == handles.end()) {
+            handles[name] = glGetUniformLocation(programID, name.c_str());
+        }
+    }
 };
 
 class Shader {

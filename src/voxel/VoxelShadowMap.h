@@ -2,8 +2,6 @@
 //
 //#include "Chunk.h"
 //#include "DirectionalLight.h"
-//#include "types.h"
-//#include "Brush.h"
 //
 //class VoxelShadowMap {
 //private:
@@ -16,4 +14,4 @@
 //    void calc_shadow(Chunk *chunk, DirectionalLight *light);
 //    int get(Coord3 coord);
 //};
-
+//

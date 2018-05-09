@@ -83,4 +83,4 @@
 //int VoxelShadowMap::get(Coord3 coord) {
 //    return total[coord] / count[coord];
 //}
-
+//

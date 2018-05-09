@@ -1,0 +1,17 @@
+#version 330 core
+
+layout(location = 0) in ivec3 position;
+layout(location = 1) in ivec3 color;
+layout(location = 2) in int lighting;
+
+uniform mat4 MVP;
+
+out vec3 fragmentColor;
+out float fragmentLighting;
+
+void main(){
+
+	gl_Position =  MVP * vec4(position, 1);
+	fragmentColor = color / 255.0;
+	fragmentLighting = float(lighting) / 15.0;
+}

@@ -25,8 +25,8 @@ public:
 
 	void load() override {
         programID = ShaderLoader::loadProgram("standard");
-		uniforms.get_handles(programID);
-	}
+        uniforms.programID = programID;
+    }
 
 	void bind() override {
 		glUseProgram(programID);
@@ -46,16 +46,16 @@ public:
 		glm::mat4 MVP = currentCamera->Projection * currentCamera->View * currentNode->matrix;
 		uniforms.set("MVP", MVP);
 
-		glm::mat4 biasMatrix(
-			0.5, 0.0, 0.0, 0.0,
-			0.0, 0.5, 0.0, 0.0,
-			0.0, 0.0, 0.5, 0.0,
-			0.5, 0.5, 0.5, 1.0
-		);
-
 		uniforms.set("hasShadowMap", scene->shadowMap != 0);
 
 		if (scene->shadowMap != 0) {
+            glm::mat4 biasMatrix(
+                                 0.5, 0.0, 0.0, 0.0,
+                                 0.0, 0.5, 0.0, 0.0,
+                                 0.0, 0.0, 0.5, 0.0,
+                                 0.5, 0.5, 0.5, 1.0
+                                 );
+
 			Camera *shadowMapCamera = scene->shadowMap->camera;
 			uniforms.set_texture("shadowMap", scene->shadowMap->getShadowMap());
 			glm::mat4 shadowMVP = shadowMapCamera->Projection * shadowMapCamera->View * currentNode->matrix;

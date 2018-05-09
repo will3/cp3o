@@ -18,8 +18,6 @@ include_directories(
 	../glfw/include/
 )
 
-SET(CP3O_SHADER_DIR src/shaders)
-
 add_library(CP3O STATIC
 	${CP3O_SOURCE}
 	${CP3O_HEADERS}
@@ -30,3 +28,6 @@ target_link_libraries(CP3O
 	GLEW
 	glfw
 )
+
+file(COPY src/core/shaders DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY src/voxel/shaders DESTINATION ${CMAKE_BINARY_DIR})

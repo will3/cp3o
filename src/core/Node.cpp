@@ -25,7 +25,8 @@ void Node::remove(Node * node)
 
 void Node::update_matrix()
 {
-	matrix = glm::translate(position) * glm::toMat4(rotation) * glm::scale(scale);
+	matrix = glm::translate(position);
+//			* glm::toMat4(rotation) * glm::scale(scale);
 }
 
 void Node::remove_self()

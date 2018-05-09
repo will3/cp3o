@@ -66,4 +66,12 @@ public:
 	void hide() {
 		glfwTerminate();
 	}
+    
+    float aspect() {
+        return width / (float)height;
+    }
+    
+    bool shouldClose() {
+        return glfwWindowShouldClose(window) > 0;
+    }
 };

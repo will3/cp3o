@@ -47,8 +47,7 @@ void Renderer::load() {
 		throw std::runtime_error("Failed to initialize GLEW\n");
 	}
 
-	// Dark blue background
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClearColor(clearColor[0], clearColor[1], clearColor[2], 1.0);
 
 	glGenVertexArrays(1, &VertexArrayID);
 	glBindVertexArray(VertexArrayID);

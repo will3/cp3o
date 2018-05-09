@@ -1,23 +1,18 @@
-#pragma once;
+#pragma once
+
 #include "Geometry.h"
 #include <array>
 #include "ArrayBuffer.h"
 #include "ElementBuffer.h"
 
-struct VoxelVertice {
-	std::array<GLint, 3> position;
-	std::array<GLint, 3> color;
-	GLint lighting = max_light_value;
-};
-
 class VoxelGeometry : public Geometry {
-private:
+public:
 	ArrayBuffer<GLint, GL_INT> *positions = new ArrayBuffer<GLint, GL_INT>(0, 3);
 	ArrayBuffer<GLint, GL_INT> *colors = new ArrayBuffer<GLint, GL_INT>(1, 3);
-	ArrayBuffer<GLint, GL_INT> *lighting = new ArrayBuffer<GLint, GL_INT>(2, 1);
+	ArrayBuffer<GLint, GL_INT> *lightings = new ArrayBuffer<GLint, GL_INT>(2, 1);
 	ElementBuffer *indices = new ElementBuffer();
-public:
-	void push_vertice(float x, float y, float z, int r, int g, int b, int light) {
+
+	void push_vertice(float x, float y, float z, int r, int g, int b, int lighting) {
 		positions->push_back(x);
 		positions->push_back(y);
 		positions->push_back(z);
@@ -26,36 +21,20 @@ public:
 		colors->push_back(g);
 		colors->push_back(b);
 
-		lighting->push_back(light);
-	}
-
-	ArrayBuffer<GLint, GL_INT>* get_positions() {
-		return positions;
-	}
-
-	ArrayBuffer<GLint, GL_INT>* get_colors() {
-		return colors;
-	}
-
-	ArrayBuffer<GLint, GL_INT>* get_lighting() {
-		return lighting;
-	}
-
-	ElementBuffer* get_indices() {
-		return indices;
+		lightings->push_back(lighting);
 	}
 
 	void load() {
 		positions->load();
 		colors->load();
-		lighting->load();
+		lightings->load();
 		indices->load();
 	}
 
 	void unload() {
 		positions->unload();
 		colors->unload();
-		lighting->unload();
+		lightings->unload();
 		indices->unload();
 	}
 
@@ -63,7 +42,7 @@ public:
 	{
 		positions->bind();
 		colors->bind();
-		lighting->bind();
+		lightings->bind();
 		indices->bind();
 	}
 
@@ -71,7 +50,7 @@ public:
 	{
 		positions->unbind();
 		colors->unbind();
-		lighting->unbind();
+		lightings->unbind();
 		indices->unbind();
 	}
 
@@ -82,7 +61,7 @@ public:
 	~VoxelGeometry() {
 		delete positions;
 		delete colors;
-		delete lighting;
+		delete lightings;
 		delete indices;
 	}
 };

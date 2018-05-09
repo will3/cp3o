@@ -11,7 +11,7 @@ public:
 	void load() override {
 		programID = ShaderLoader::loadProgram(shader->programName);
 		uniforms = shader->uniforms;
-		uniforms.get_handles(programID);
+        uniforms.programID = programID;
 	};
 
 	void bind() override {
@@ -22,12 +22,10 @@ public:
 	};
 
 	void unload() override {
-		glDeleteProgram(programID);
-	}
+        glDeleteProgram(programID);
+    }
 
 public:
 	ShaderMaterial(Shader *shader) : shader(shader) {}
-	~ShaderMaterial() override {
-		delete shader;
-	}
+	~ShaderMaterial() override { unload(); delete shader; }
 };
