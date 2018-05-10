@@ -5,8 +5,6 @@
 
 #define max_light_value 15
 
-typedef int ao_type;
-
 class MaskValue {
 public:
 	int v = 0;

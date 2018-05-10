@@ -7,14 +7,6 @@
 #include "Mesh.h"
 #include <functional>
 
-ao_type Mesher::get_ao(int s1, int s2, int c) {
-    if (s1 && s2) {
-        return 3;
-    }
-
-    return s1 + s2 + c;
-}
-
 bool Mesher::stop_merge(MaskValue & c, MaskValue & next) {
     return next.v != c.v || next.has_ao() || next.lighting != c.lighting || next.color != c.color;
 }
@@ -47,21 +39,43 @@ void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry, int x, int y, int w
 
     lightings->push_back(getLight(ao0), getLight(ao1), getLight(ao2), getLight(ao3));
 
+	bool flippedQuad = ao0 + ao2 > ao1 + ao3;
+
     if (front) {
-        indices->push_back(index);
-        indices->push_back(index + 1);
-        indices->push_back(index + 2);
-        indices->push_back(index + 2);
-        indices->push_back(index + 3);
-        indices->push_back(index);
+		if (flippedQuad) {
+			indices->push_back(index);
+			indices->push_back(index + 1);
+			indices->push_back(index + 3);
+			indices->push_back(index + 1);
+			indices->push_back(index + 2);
+			indices->push_back(index + 3);
+		}
+		else {
+			indices->push_back(index);
+			indices->push_back(index + 1);
+			indices->push_back(index + 2);
+			indices->push_back(index + 2);
+			indices->push_back(index + 3);
+			indices->push_back(index);
+		}
     }
-    else {
-        indices->push_back(index + 2);
-        indices->push_back(index + 1);
-        indices->push_back(index);
-        indices->push_back(index);
-        indices->push_back(index + 3);
-        indices->push_back(index + 2);
+	else {
+		if (flippedQuad) {
+			indices->push_back(index + 3);
+			indices->push_back(index + 1);
+			indices->push_back(index);
+			indices->push_back(index + 3);
+			indices->push_back(index + 2);
+			indices->push_back(index + 1);
+		}
+		else {
+			indices->push_back(index + 2);
+			indices->push_back(index + 1);
+			indices->push_back(index);
+			indices->push_back(index);
+			indices->push_back(index + 3);
+			indices->push_back(index + 2);
+		}
     }
 }
 
@@ -160,25 +174,25 @@ VoxelGeometry* Mesher::mesh(Chunk<Voxel> *chunk, Chunks<Voxel> *chunks) {
                     }
 
 //                    int aoX = front ? 1 : -1;
-                    int aoX = front ? 0 : -1;
+                    int aoI = front ? i : i - 1;
 
-                    Coord3 c00 = Coord3(i + aoX, j - 1, k - 1).rotate(d);
-                    Coord3 c01 = Coord3(i + aoX, j, k - 1).rotate(d);
-                    Coord3 c02 = Coord3(i + aoX, j + 1, k - 1).rotate(d);
-                    Coord3 c10 = Coord3(i + aoX, j - 1, k).rotate(d);
-                    Coord3 c12 = Coord3(i + aoX, j + 1, k).rotate(d);
-                    Coord3 c20 = Coord3(i + aoX, j - 1, k + 1).rotate(d);
-                    Coord3 c21 = Coord3(i + aoX, j, k + 1).rotate(d);
-                    Coord3 c22 = Coord3(i + aoX, j + 1, k + 1).rotate(d);
+                    Coord3 c00 = Coord3(aoI, j - 1, k - 1).rotate(d);
+                    Coord3 c01 = Coord3(aoI, j, k - 1).rotate(d);
+                    Coord3 c02 = Coord3(aoI, j + 1, k - 1).rotate(d);
+                    Coord3 c10 = Coord3(aoI, j - 1, k).rotate(d);
+                    Coord3 c12 = Coord3(aoI, j + 1, k).rotate(d);
+                    Coord3 c20 = Coord3(aoI, j - 1, k + 1).rotate(d);
+                    Coord3 c21 = Coord3(aoI, j, k + 1).rotate(d);
+                    Coord3 c22 = Coord3(aoI, j + 1, k + 1).rotate(d);
 
-                    int s00 = getVoxel(c00, chunk, chunks).solid ? 1 : 0;
-                    int s01 = getVoxel(c01, chunk, chunks).solid ? 1 : 0;
-                    int s02 = getVoxel(c02, chunk, chunks).solid ? 1 : 0;
-                    int s10 = getVoxel(c10, chunk, chunks).solid ? 1 : 0;
-                    int s12 = getVoxel(c12, chunk, chunks).solid ? 1 : 0;
-                    int s20 = getVoxel(c20, chunk, chunks).solid ? 1 : 0;
-                    int s21 = getVoxel(c21, chunk, chunks).solid ? 1 : 0;
-                    int s22 = getVoxel(c22, chunk, chunks).solid ? 1 : 0;
+					Voxel s00 = getVoxel(c00, chunk, chunks);
+					Voxel s01 = getVoxel(c01, chunk, chunks);
+					Voxel s02 = getVoxel(c02, chunk, chunks);
+					Voxel s10 = getVoxel(c10, chunk, chunks);
+					Voxel s12 = getVoxel(c12, chunk, chunks);
+					Voxel s20 = getVoxel(c20, chunk, chunks);
+					Voxel s21 = getVoxel(c21, chunk, chunks);
+					Voxel s22 = getVoxel(c22, chunk, chunks);
 
 //                    Coord3 coord = front ? coord_a : coord_b;
 //                    int light_amount = chunk->get_light(coord);
@@ -231,9 +245,26 @@ Voxel Mesher::getVoxel(Coord3 coord, Chunk<Voxel> *chunk, Chunks<Voxel> *chunks)
 
 int Mesher::getLight(int ao) {
 //    float ao_strength = 0.1f;
-    float ao_strength = 1.0f;
-    float lightFloat = (1.0f - (ao / 3.0f * ao_strength));
-    int light = floor(lightFloat * 16);
+    float ao_strength = 0.1f;
+	float lightFloat = 1 - (ao / 3.0f * ao_strength);
+    int light = floor(lightFloat * 15);
     return light;
 }
 
+int Mesher::get_ao(Voxel& s1, Voxel& s2, Voxel& c) {
+	if (s1.solid && s2.solid) {
+		return 3;
+	}
+
+	int num = 0;
+	if (s1.solid) {
+		num += 1;
+	}
+	if (s2.solid) {
+		num += 1;
+	}
+	if (c.solid) {
+		num += 1;
+	}
+	return num;
+}
