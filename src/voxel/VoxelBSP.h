@@ -138,6 +138,8 @@ public:
 			delete chunk;
 		}
 	};
+
+	VoxelChunk(int size) : size(size) {}
 };
 
 class VoxelBSP {
@@ -166,8 +168,6 @@ public:
 		return data->get(i, j, k);
 	};
 
-	VoxelBSP() {};
-
 	~VoxelBSP() { delete data; }
 
 	void expand(int offsetI, int offsetJ, int offsetK) {
@@ -184,4 +184,8 @@ public:
 	VoxelChunk * getChunk(int i, int j, int k) {
 		return data->getChunk(i, j, k);
 	}
+
+	VoxelBSP(int size = 32) {
+		data = new VoxelChunk(size);
+	};
 };
