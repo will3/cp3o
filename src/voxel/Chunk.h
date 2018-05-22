@@ -3,7 +3,6 @@
 #include "Mask.h"
 #include "Mesh.h"
 #include <unordered_map>
-#define CHUNK_SIZE 32
 #include "types.h"
 #include <glm/glm.hpp>
 
@@ -19,9 +18,11 @@ private:
         return i * CHUNK_SIZE * CHUNK_SIZE + j * CHUNK_SIZE + k;
     }
 public:
-    Chunk(Coord3 origin = Coord3()) {
+	int size = 32;
+    Chunk(Coord3 origin = Coord3(), int size = 32) {
         this->origin = origin;
         this->offset = origin * CHUNK_SIZE;
+		this->size = size;
         
         data.resize(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
     }

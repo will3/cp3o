@@ -12,11 +12,11 @@ static Mask backMask;
 
 void getAO(bool front, int i, int j, int k, int d, VoxelChunk *chunk, VoxelBSP *bsp, int *ao0, int *ao1, int *ao2, int *ao3);
 
-bool Mesher::stop_merge(MaskValue & c, MaskValue & next) {
+bool Mesher::stopMerge(MaskValue & c, MaskValue & next) {
     return next.v != c.v || next.has_ao() || next.lighting != c.lighting || next.color != c.color;
 }
 
-void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry, int x, int y, int w, int h, int ao0, int ao1, int ao2, int ao3, int l, glm::vec3 color) {
+void Mesher::copyQuads(Mask& mask, VoxelGeometry *geometry, int x, int y, int w, int h, int ao0, int ao1, int ao2, int ao3, int l, glm::vec3 color) {
     bool front = mask.front;
     float light_strength = 0.6f;
     auto vertices = geometry->positions;
@@ -84,14 +84,14 @@ void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry, int x, int y, int w
     }
 }
 
-void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry) {
+void Mesher::copyQuads(Mask& mask, int size, VoxelGeometry *geometry) {
     int n = 0;
     MaskValue c;
     int w, h;
     auto& data = mask.data;
 
-    for (int j = 0; j < CHUNK_SIZE; j++) {
-        for (int i = 0; i < CHUNK_SIZE; ) {
+    for (int j = 0; j < size; j++) {
+        for (int i = 0; i < size; ) {
             c = data[n];
 
             if (c.v == 0) {
@@ -102,7 +102,7 @@ void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry) {
 
             // Check AO
             if (c.has_ao()) {
-                copy_quads(mask, geometry, j, i, 1, 1, c.ao0, c.ao1, c.ao2, c.ao3, c.lighting, c.color);
+                copyQuads(mask, geometry, j, i, 1, 1, c.ao0, c.ao1, c.ao2, c.ao3, c.lighting, c.color);
                 i++;
                 n++;
                 continue;
@@ -111,19 +111,19 @@ void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry) {
             int lighting = c.lighting;
 
             // Compute width
-            for (w = 1; i + w < CHUNK_SIZE; ++w) {
+            for (w = 1; i + w < size; ++w) {
                 MaskValue &next = data[n + w];
-                if (stop_merge(c, next)) {
+                if (stopMerge(c, next)) {
                     break;
                 }
             }
 
             // Compute height
             bool done = false;
-            for (h = 1; j + h < CHUNK_SIZE; h++) {
+            for (h = 1; j + h < size; h++) {
                 for (int k = 0; k < w; k++) {
-                    MaskValue &next = data[n + k + h * CHUNK_SIZE];
-                    if (stop_merge(c, next)) {
+                    MaskValue &next = data[n + k + h * size];
+                    if (stopMerge(c, next)) {
                         done = true;
                         break;
                     }
@@ -134,12 +134,12 @@ void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry) {
             }
 
             // Add Quad
-            copy_quads(mask, geometry, j, i, h, w, 0, 0, 0, 0, lighting, c.color);
+            copyQuads(mask, geometry, j, i, h, w, 0, 0, 0, 0, lighting, c.color);
 
             //Zero-out mask
             for (int l = 0; l < h; l++) {
                 for (int k = 0; k < w; k++) {
-                    data[n + k + l * CHUNK_SIZE] = 0;
+                    data[n + k + l * size] = 0;
                 }
             }
 
@@ -149,11 +149,12 @@ void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry) {
 }
 
 bool getSolid(Coord3& coord, VoxelChunk *chunk, VoxelBSP *bsp) {
+	int size = chunk->size;
 	auto origin = chunk->origin;
 	Coord3 offset = Coord3(origin.x, origin.y, origin.z);
-	if (coord.i < 0 || coord.i >= CHUNK_SIZE ||
-		coord.j < 0 || coord.j >= CHUNK_SIZE ||
-		coord.k < 0 || coord.k >= CHUNK_SIZE) {
+	if (coord.i < 0 || coord.i >= size ||
+		coord.j < 0 || coord.j >= size ||
+		coord.k < 0 || coord.k >= size) {
 		Coord3 chunksCoord = coord + offset;
 		int v = bsp->get(chunksCoord.i, chunksCoord.j, chunksCoord.k);
 		return v > 0;
@@ -170,9 +171,10 @@ bool getSolid(Coord3& coord, VoxelChunk *chunk, VoxelBSP *bsp) {
 VoxelGeometry * Mesher::mesh(VoxelChunk *chunk, VoxelBSP *bsp, getColorFuncType getColor)
 {
     VoxelGeometry *geometry = new VoxelGeometry();
+	int size = chunk->size;
 
     for (int d = 0; d < 3; d++) {
-        for (int i = 0; i <= CHUNK_SIZE; i++) {
+        for (int i = 0; i <= size; i++) {
 			frontMask.front = true;
 			frontMask.i = i;
 			frontMask.d = d;
@@ -180,8 +182,8 @@ VoxelGeometry * Mesher::mesh(VoxelChunk *chunk, VoxelBSP *bsp, getColorFuncType 
 			backMask.i = i;
 			backMask.d = d;
 
-            for (int j = 0; j < CHUNK_SIZE; j++) {
-                for (int k = 0; k < CHUNK_SIZE; k++) {
+            for (int j = 0; j < size; j++) {
+                for (int k = 0; k < size; k++) {
                     Coord3 coord_a = Coord3(i - 1, j, k).rotate(d);
                     bool a = getSolid(coord_a, chunk, bsp);
 
@@ -198,7 +200,7 @@ VoxelGeometry * Mesher::mesh(VoxelChunk *chunk, VoxelBSP *bsp, getColorFuncType 
                         continue;
                     }
 
-                    if (i == CHUNK_SIZE && !front) {
+                    if (i == size && !front) {
                         continue;
                     }
 
@@ -221,8 +223,8 @@ VoxelGeometry * Mesher::mesh(VoxelChunk *chunk, VoxelBSP *bsp, getColorFuncType 
                 }
             }
 
-			copy_quads(frontMask, geometry);
-			copy_quads(backMask, geometry);
+			copyQuads(frontMask, size, geometry);
+			copyQuads(backMask, size, geometry);
 
 			frontMask.clear();
 			backMask.clear();

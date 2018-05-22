@@ -2,36 +2,27 @@
 #include "Mesh.h"
 #include "Chunk.h"
 
-Mask::Mask()
-{
-	data.resize(CHUNK_SIZE * CHUNK_SIZE);
-}
-
-Mask::Mask(int i, int d, int front) : i(i), d(d), front(front) {
-	data.resize(CHUNK_SIZE * CHUNK_SIZE);
-}
-
 Mask::~Mask()
 {
 }
 
 bool Mask::is_empty(int j, int k) {
-	int index = j * CHUNK_SIZE + k;
+	int index = j * size + k;
 	return data[index].v == 0;
 }
 
 MaskValue Mask::get(int j, int k) {
-	int index = j * CHUNK_SIZE + k;
+	int index = j * size + k;
 	return data[index];
 }
 
 void Mask::set(int j, int k, MaskValue & v) {
-	int index = j * CHUNK_SIZE + k;
+	int index = j * size + k;
 	data[index] = v;
 }
 
 void Mask::clear() {
-	for (int i = 0; i < CHUNK_SIZE * CHUNK_SIZE; i++) {
+	for (int i = 0; i < size * size; i++) {
 		data[i].v = 0;
 	}
 }

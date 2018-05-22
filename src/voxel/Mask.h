@@ -29,9 +29,12 @@ public:
 	int i = 0;
 	int d = 0;
     bool front = false;
+	int size = 32;
 
-	Mask();
-	Mask(int i, int d, int front);
+	Mask(int size = 32) : size(size) {
+		data.resize(size * size);
+	};
+
 	~Mask();
 
 	bool is_empty(int j, int k);

@@ -145,32 +145,8 @@ public:
 class VoxelBSP {
 private:
 	VoxelChunk * data = new VoxelChunk();
-public:
-	void set(int i, int j, int k, int v) {
-		while (data->isOutOfBounds(i, j, k)) {
-			int iDiff = i - data->origin[0];
-			int jDiff = j - data->origin[1];
-			int kDiff = k - data->origin[2];
-			int offsetI = iDiff < 0 ? -1 : 0;
-			int offsetJ = jDiff < 0 ? -1 : 0;
-			int offsetK = kDiff < 0 ? -1 : 0;
 
-			expand(offsetI, offsetJ, offsetK);
-		}
-
-		data->set(i, j, k, v);
-	};
-
-	int get(int i, int j, int k) {
-		if (data->isOutOfBounds(i, j, k)) {
-			return 0;
-		}
-		return data->get(i, j, k);
-	};
-
-	~VoxelBSP() { delete data; }
-
-	void expand(int offsetI, int offsetJ, int offsetK) {
+	void expandWithOffset(int offsetI, int offsetJ, int offsetK) {
 		glm::ivec3 origin = data->origin;
 		int size = data->size;
 		int level = data->level;
@@ -181,11 +157,40 @@ public:
 		data = parent;
 	}
 
+public:
+	int size = 32;
+	void set(int i, int j, int k, int v) {
+		expand(i, j, k);
+		data->set(i, j, k, v);
+	};
+
+	void expand(int i, int j, int k) {
+		while (data->isOutOfBounds(i, j, k)) {
+			int iDiff = i - data->origin[0];
+			int jDiff = j - data->origin[1];
+			int kDiff = k - data->origin[2];
+			int offsetI = iDiff < 0 ? -1 : 0;
+			int offsetJ = jDiff < 0 ? -1 : 0;
+			int offsetK = kDiff < 0 ? -1 : 0;
+
+			expandWithOffset(offsetI, offsetJ, offsetK);
+		}
+	}
+
+	int get(int i, int j, int k) {
+		if (data->isOutOfBounds(i, j, k)) {
+			return 0;
+		}
+		return data->get(i, j, k);
+	};
+
+	~VoxelBSP() { delete data; }
+
 	VoxelChunk * getChunk(int i, int j, int k) {
 		return data->getChunk(i, j, k);
 	}
 
-	VoxelBSP(int size = 32) {
+	VoxelBSP(int size = 32) : size(size) {
 		data = new VoxelChunk(size);
 	};
 };

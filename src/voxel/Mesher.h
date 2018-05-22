@@ -15,9 +15,9 @@ typedef std::function<glm::ivec3(Coord3& coord)> getColorFuncType;
 
 class Mesher {
 private:
-    static bool stop_merge(MaskValue& c, MaskValue& next);
-    static void copy_quads(Mask& mask, VoxelGeometry *geometry, int x, int y, int w, int h, int ao0, int ao1, int ao2, int ao3, int l, glm::vec3 color);
-    static void copy_quads(Mask& mask, VoxelGeometry *geometry);
+    static bool stopMerge(MaskValue& c, MaskValue& next);
+    static void copyQuads(Mask& mask, VoxelGeometry *geometry, int x, int y, int w, int h, int ao0, int ao1, int ao2, int ao3, int l, glm::vec3 color);
+    static void copyQuads(Mask& mask, int size, VoxelGeometry *geometry);
     static int getLight(int ao);
 public:
 	static VoxelGeometry* mesh(VoxelChunk *chunk, VoxelBSP *bsp, getColorFuncType getColor);
