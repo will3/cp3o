@@ -83,7 +83,7 @@ void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry) {
     int n = 0;
     MaskValue c;
     int w, h;
-    auto data = mask.data;
+    auto& data = mask.data;
 
     for (int j = 0; j < CHUNK_SIZE; j++) {
         for (int i = 0; i < CHUNK_SIZE; ) {
@@ -144,9 +144,15 @@ void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry) {
 }
 
 VoxelGeometry* Mesher::mesh(Chunk<Voxel> *chunk, Chunks<Voxel> *chunks) {
-	Coord3 origin = chunk->get_origin();
 	getVoxelFuncType getVoxel = [=](Coord3 coord) {
-		return chunks->get(coord + origin);
+		if (coord.i < 0 || coord.i >= CHUNK_SIZE ||
+			coord.j < 0 || coord.j >= CHUNK_SIZE ||
+			coord.k < 0 || coord.k >= CHUNK_SIZE) {
+			Coord3 chunksCoord = coord + chunk->get_offset();
+			return chunks->get(chunksCoord);
+		}
+
+		return chunk->get(coord);
 	};
 
 	return mesh(getVoxel);
@@ -156,7 +162,6 @@ VoxelGeometry * Mesher::mesh(getVoxelFuncType getVoxel)
 {
     VoxelGeometry *geometry = new VoxelGeometry();
 
-    std::vector<Mask *> masks;
     for (int d = 0; d < 3; d++) {
         for (int i = 0; i <= CHUNK_SIZE; i++) {
             Mask *front_mask = new Mask(i, d, true);
@@ -183,7 +188,6 @@ VoxelGeometry * Mesher::mesh(getVoxelFuncType getVoxel)
                         continue;
                     }
 
-//                    int aoX = front ? 1 : -1;
                     int aoI = front ? i : i - 1;
 
                     Coord3 c00 = Coord3(aoI, j - 1, k - 1).rotate(d);
@@ -204,8 +208,6 @@ VoxelGeometry * Mesher::mesh(getVoxelFuncType getVoxel)
 					Voxel s21 = getVoxel(c21);
 					Voxel s22 = getVoxel(c22);
 
-//                    Coord3 coord = front ? coord_a : coord_b;
-//                    int light_amount = chunk->get_light(coord);
                     int light_amount = 15;
 
                     MaskValue v = MaskValue(1,
@@ -224,20 +226,12 @@ VoxelGeometry * Mesher::mesh(getVoxelFuncType getVoxel)
                 }
             }
 
-            masks.push_back(front_mask);
-            masks.push_back(back_mask);
-        }
+			copy_quads(*front_mask, geometry);
+			copy_quads(*back_mask, geometry);
+			delete front_mask;
+			delete back_mask;
+		}
     }
-
-    for (Mask *mask : masks) {
-        copy_quads(*mask, geometry);
-    }
-
-    for (Mask *mask : masks) {
-        delete mask;
-    }
-
-//    chunk->position = glm::vec3(chunk->get_offset().i, chunk->get_offset().j, chunk->get_offset().k);
 
     return geometry;
 }
