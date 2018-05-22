@@ -7,6 +7,11 @@
 #include "Mesh.h"
 #include <functional>
 
+static Mask frontMask;
+static Mask backMask;
+
+void getAO(bool front, int i, int j, int k, int d, VoxelChunk *chunk, VoxelBSP *bsp, int *ao0, int *ao1, int *ao2, int *ao3);
+
 bool Mesher::stop_merge(MaskValue & c, MaskValue & next) {
     return next.v != c.v || next.has_ao() || next.lighting != c.lighting || next.color != c.color;
 }
@@ -143,21 +148,45 @@ void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry) {
     }
 }
 
-VoxelGeometry * Mesher::mesh(getSolidFuncType getSolid, getColorFuncType getColor)
+bool getSolid(Coord3& coord, VoxelChunk *chunk, VoxelBSP *bsp) {
+	auto origin = chunk->origin;
+	Coord3 offset = Coord3(origin.x, origin.y, origin.z);
+	if (coord.i < 0 || coord.i >= CHUNK_SIZE ||
+		coord.j < 0 || coord.j >= CHUNK_SIZE ||
+		coord.k < 0 || coord.k >= CHUNK_SIZE) {
+		Coord3 chunksCoord = coord + offset;
+		int v = bsp->get(chunksCoord.i, chunksCoord.j, chunksCoord.k);
+		return v > 0;
+	}
+
+	if (chunk == 0) {
+		return false;
+	}
+
+	int v = chunk->getLocal(coord.i, coord.j, coord.k);
+	return v > 0;
+}
+
+VoxelGeometry * Mesher::mesh(VoxelChunk *chunk, VoxelBSP *bsp, getColorFuncType getColor)
 {
     VoxelGeometry *geometry = new VoxelGeometry();
 
     for (int d = 0; d < 3; d++) {
         for (int i = 0; i <= CHUNK_SIZE; i++) {
-            Mask *front_mask = new Mask(i, d, true);
-            Mask *back_mask = new Mask(i, d, false);
+			frontMask.front = true;
+			frontMask.i = i;
+			frontMask.d = d;
+			backMask.front = false;
+			backMask.i = i;
+			backMask.d = d;
+
             for (int j = 0; j < CHUNK_SIZE; j++) {
                 for (int k = 0; k < CHUNK_SIZE; k++) {
                     Coord3 coord_a = Coord3(i - 1, j, k).rotate(d);
-                    bool a = getSolid(coord_a);
+                    bool a = getSolid(coord_a, chunk, bsp);
 
                     Coord3 coord_b = Coord3(i, j, k).rotate(d);
-					bool b = getSolid(coord_b);
+					bool b = getSolid(coord_b, chunk, bsp);
 
 					bool front = a;
 
@@ -173,48 +202,30 @@ VoxelGeometry * Mesher::mesh(getSolidFuncType getSolid, getColorFuncType getColo
                         continue;
                     }
 
-                    int aoI = front ? i : i - 1;
-
-                    Coord3 c00 = Coord3(aoI, j - 1, k - 1).rotate(d);
-                    Coord3 c01 = Coord3(aoI, j, k - 1).rotate(d);
-                    Coord3 c02 = Coord3(aoI, j + 1, k - 1).rotate(d);
-                    Coord3 c10 = Coord3(aoI, j - 1, k).rotate(d);
-                    Coord3 c12 = Coord3(aoI, j + 1, k).rotate(d);
-                    Coord3 c20 = Coord3(aoI, j - 1, k + 1).rotate(d);
-                    Coord3 c21 = Coord3(aoI, j, k + 1).rotate(d);
-                    Coord3 c22 = Coord3(aoI, j + 1, k + 1).rotate(d);
-
-					bool s00 = getSolid(c00);
-					bool s01 = getSolid(c01);
-					bool s02 = getSolid(c02);
-					bool s10 = getSolid(c10);
-					bool s12 = getSolid(c12);
-					bool s20 = getSolid(c20);
-					bool s21 = getSolid(c21);
-					bool s22 = getSolid(c22);
+					int ao0, ao1, ao2, ao3;
+					getAO(front, i, j, k, d, chunk, bsp, &ao0, &ao1, &ao2, &ao3);
 
                     int light_amount = 15;
 
-                    MaskValue v = MaskValue(1,
-                        get_ao(s10, s01, s00), get_ao(s01, s12, s02), get_ao(s12, s21, s22), get_ao(s21, s10, s20),
-                        light_amount);
+                    MaskValue v = MaskValue(1, ao0, ao1, ao2, ao3, light_amount);
 
 					Coord3& coordColor = front ? coord_a : coord_b;
                     v.color = getColor(coordColor);
 
                     if (front) {
-                        front_mask->set(j, k, v);
+						frontMask.set(j, k, v);
                     }
                     else {
-                        back_mask->set(j, k, v);
+                        backMask.set(j, k, v);
                     }
                 }
             }
 
-			copy_quads(*front_mask, geometry);
-			copy_quads(*back_mask, geometry);
-			delete front_mask;
-			delete back_mask;
+			copy_quads(frontMask, geometry);
+			copy_quads(backMask, geometry);
+
+			frontMask.clear();
+			backMask.clear();
 		}
     }
 
@@ -229,7 +240,7 @@ int Mesher::getLight(int ao) {
     return light;
 }
 
-int Mesher::get_ao(bool s1, bool s2, bool c) {
+int getAO(bool s1, bool s2, bool c) {
 	if (s1 && s2) {
 		return 3;
 	}
@@ -245,4 +256,31 @@ int Mesher::get_ao(bool s1, bool s2, bool c) {
 		num += 1;
 	}
 	return num;
+}
+
+void getAO(bool front, int i, int j, int k, int d, VoxelChunk *chunk, VoxelBSP *bsp, int *ao0, int *ao1, int *ao2, int *ao3) {
+	int aoI = front ? i : i - 1;
+
+	Coord3 c00 = Coord3(aoI, j - 1, k - 1).rotate(d);
+	Coord3 c01 = Coord3(aoI, j, k - 1).rotate(d);
+	Coord3 c02 = Coord3(aoI, j + 1, k - 1).rotate(d);
+	Coord3 c10 = Coord3(aoI, j - 1, k).rotate(d);
+	Coord3 c12 = Coord3(aoI, j + 1, k).rotate(d);
+	Coord3 c20 = Coord3(aoI, j - 1, k + 1).rotate(d);
+	Coord3 c21 = Coord3(aoI, j, k + 1).rotate(d);
+	Coord3 c22 = Coord3(aoI, j + 1, k + 1).rotate(d);
+
+	bool s00 = getSolid(c00, chunk, bsp);
+	bool s01 = getSolid(c01, chunk, bsp);
+	bool s02 = getSolid(c02, chunk, bsp);
+	bool s10 = getSolid(c10, chunk, bsp);
+	bool s12 = getSolid(c12, chunk, bsp);
+	bool s20 = getSolid(c20, chunk, bsp);
+	bool s21 = getSolid(c21, chunk, bsp);
+	bool s22 = getSolid(c22, chunk, bsp);
+
+	*ao0 = getAO(s10, s01, s00);
+	*ao1 = getAO(s01, s12, s02);
+	*ao2 = getAO(s12, s21, s22);
+	*ao3 = getAO(s21, s10, s20);
 }

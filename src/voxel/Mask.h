@@ -30,6 +30,7 @@ public:
 	int d = 0;
     bool front = false;
 
+	Mask();
 	Mask(int i, int d, int front);
 	~Mask();
 
@@ -38,4 +39,6 @@ public:
 	MaskValue get(int j, int k);
 
 	void set(int j, int k, MaskValue& v);
+
+	void clear();
 };
