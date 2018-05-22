@@ -32,10 +32,10 @@ void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry, int x, int y, int w
     vertices->push_back(v2.i, v2.j, v2.k);
     vertices->push_back(v3.i, v3.j, v3.k);
 
-    colors->push_back((int)(color.r * 255), (int)(color.g * 255), (int)(color.b * 255));
-    colors->push_back((int)(color.r * 255), (int)(color.g * 255), (int)(color.b * 255));
-    colors->push_back((int)(color.r * 255), (int)(color.g * 255), (int)(color.b * 255));
-    colors->push_back((int)(color.r * 255), (int)(color.g * 255), (int)(color.b * 255));
+	colors->push_back(color.r, color.g, color.b);
+	colors->push_back(color.r, color.g, color.b);
+	colors->push_back(color.r, color.g, color.b);
+	colors->push_back(color.r, color.g, color.b);
 
     lightings->push_back(getLight(ao0), getLight(ao1), getLight(ao2), getLight(ao3));
 
@@ -144,6 +144,16 @@ void Mesher::copy_quads(Mask& mask, VoxelGeometry *geometry) {
 }
 
 VoxelGeometry* Mesher::mesh(Chunk<Voxel> *chunk, Chunks<Voxel> *chunks) {
+	Coord3 origin = chunk->get_origin();
+	getVoxelFuncType getVoxel = [=](Coord3 coord) {
+		return chunks->get(coord + origin);
+	};
+
+	return mesh(getVoxel);
+}
+
+VoxelGeometry * Mesher::mesh(getVoxelFuncType getVoxel)
+{
     VoxelGeometry *geometry = new VoxelGeometry();
 
     std::vector<Mask *> masks;
@@ -154,10 +164,10 @@ VoxelGeometry* Mesher::mesh(Chunk<Voxel> *chunk, Chunks<Voxel> *chunks) {
             for (int j = 0; j < CHUNK_SIZE; j++) {
                 for (int k = 0; k < CHUNK_SIZE; k++) {
                     Coord3 coord_a = Coord3(i - 1, j, k).rotate(d);
-                    Voxel a = getVoxel(coord_a, chunk, chunks);
+                    Voxel a = getVoxel(coord_a);
 
                     Coord3 coord_b = Coord3(i, j, k).rotate(d);
-                    Voxel b = getVoxel(coord_b, chunk, chunks);
+                    Voxel b = getVoxel(coord_b);
 
                     bool front = a.solid;
 
@@ -185,14 +195,14 @@ VoxelGeometry* Mesher::mesh(Chunk<Voxel> *chunk, Chunks<Voxel> *chunks) {
                     Coord3 c21 = Coord3(aoI, j, k + 1).rotate(d);
                     Coord3 c22 = Coord3(aoI, j + 1, k + 1).rotate(d);
 
-					Voxel s00 = getVoxel(c00, chunk, chunks);
-					Voxel s01 = getVoxel(c01, chunk, chunks);
-					Voxel s02 = getVoxel(c02, chunk, chunks);
-					Voxel s10 = getVoxel(c10, chunk, chunks);
-					Voxel s12 = getVoxel(c12, chunk, chunks);
-					Voxel s20 = getVoxel(c20, chunk, chunks);
-					Voxel s21 = getVoxel(c21, chunk, chunks);
-					Voxel s22 = getVoxel(c22, chunk, chunks);
+					Voxel s00 = getVoxel(c00);
+					Voxel s01 = getVoxel(c01);
+					Voxel s02 = getVoxel(c02);
+					Voxel s10 = getVoxel(c10);
+					Voxel s12 = getVoxel(c12);
+					Voxel s20 = getVoxel(c20);
+					Voxel s21 = getVoxel(c21);
+					Voxel s22 = getVoxel(c22);
 
 //                    Coord3 coord = front ? coord_a : coord_b;
 //                    int light_amount = chunk->get_light(coord);
@@ -230,17 +240,6 @@ VoxelGeometry* Mesher::mesh(Chunk<Voxel> *chunk, Chunks<Voxel> *chunks) {
 //    chunk->position = glm::vec3(chunk->get_offset().i, chunk->get_offset().j, chunk->get_offset().k);
 
     return geometry;
-}
-
-Voxel Mesher::getVoxel(Coord3 coord, Chunk<Voxel> *chunk, Chunks<Voxel> *chunks) {
-    if (coord.i < 0 || coord.i >= CHUNK_SIZE ||
-        coord.j < 0 || coord.j >= CHUNK_SIZE ||
-        coord.k < 0 || coord.k >= CHUNK_SIZE) {
-        Coord3 chunksCoord = coord + chunk->get_offset();
-        return chunks->get(chunksCoord);
-    }
-
-    return chunk->get(coord);
 }
 
 int Mesher::getLight(int ao) {
