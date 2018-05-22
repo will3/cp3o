@@ -5,15 +5,20 @@
 
 class VoxelChunk {
 public:
-	std::vector<VoxelChunk *> children;
+	VoxelChunk * parent = 0;
+	std::map<int, VoxelChunk *> children;
 	int size = 32;
 	int level = 0;
 	glm::ivec3 origin = glm::ivec3(0, 0, 0);
 	std::vector<int> data;
 	int childSegments = 2;
+	int childIndex;
 
 	int get(int i, int j, int k) {
 		if (level == 0) {
+			if (data.size() == 0) {
+				return 0;
+			}
 			int index = getIndex(i, j, k);
 			if (index < 0 || index >= data.size()) {
 				throw std::runtime_error("out of index");
@@ -26,6 +31,9 @@ public:
 			}
 
 			int childIndex = getChildIndex(i, j, k);
+			if (!hasChild(childIndex)) {
+				return 0;
+			}
 			VoxelChunk *child = children[childIndex];
 			return child->get(i, j, k);
 		}
@@ -46,6 +54,9 @@ public:
 			}
 
 			int childIndex = getChildIndex(i, j, k);
+			if (!hasChild(childIndex)) {
+				return 0;
+			}
 			VoxelChunk *child = children[childIndex];
 			return child->getChunk(i, j, k);
 		}
@@ -63,11 +74,8 @@ public:
 			data[index] = v;
 		}
 		else {
-			if (children.size() == 0) {
-				makeChildren();
-			}
-
 			int childIndex = getChildIndex(i, j, k);
+			makeChild(childIndex);
 			children[childIndex]->set(i, j, k, v);
 		}
 	}
@@ -88,25 +96,29 @@ public:
 		return iDiff + jDiff + kDiff;
 	}
 
-	void makeChildren(VoxelChunk *existingChildren = 0) {
-		children.resize(8);
-		int childIndex = existingChildren == 0 ? -1 : 
-			getChildIndex(existingChildren->origin[0], existingChildren->origin[1], existingChildren->origin[2]);
+	void makeChild(int index) {
+		if (hasChild(index)) {
+			return;
+		}
+
 		int nextLevel = level - 1;
 		int halfSize = size / 2;
 
-		if (childIndex != 0) children[0] = new VoxelChunk(nextLevel, halfSize, glm::ivec3(origin[0], origin[1], origin[2]));
-		if (childIndex != 1) children[1] = new VoxelChunk(nextLevel, halfSize, glm::ivec3(origin[0], origin[1], origin[2] + halfSize));
-		if (childIndex != 2) children[2] = new VoxelChunk(nextLevel, halfSize, glm::ivec3(origin[0], origin[1] + halfSize, origin[2]));
-		if (childIndex != 3) children[3] = new VoxelChunk(nextLevel, halfSize, glm::ivec3(origin[0], origin[1] + halfSize, origin[2] + halfSize));
-		if (childIndex != 4) children[4] = new VoxelChunk(nextLevel, halfSize, glm::ivec3(origin[0] + halfSize, origin[1], origin[2]));
-		if (childIndex != 5) children[5] = new VoxelChunk(nextLevel, halfSize, glm::ivec3(origin[0] + halfSize, origin[1], origin[2] + halfSize));
-		if (childIndex != 6) children[6] = new VoxelChunk(nextLevel, halfSize, glm::ivec3(origin[0] + halfSize, origin[1] + halfSize, origin[2]));
-		if (childIndex != 7) children[7] = new VoxelChunk(nextLevel, halfSize, glm::ivec3(origin[0] + halfSize, origin[1] + halfSize, origin[2] + halfSize));
-		
-		if (existingChildren != 0) {
-			children[childIndex] = existingChildren;
+		glm::ivec3 childOrigin = origin;
+
+		if ((index & 4) == 4) {
+			childOrigin[0] += halfSize;
 		}
+		if ((index & 2) == 2) { 
+			childOrigin[1] += halfSize; 
+		}
+		if ((index & 1) == 1) { 
+			childOrigin[2] += halfSize;
+		}
+
+		children[index] = new VoxelChunk(nextLevel, halfSize, childOrigin);
+		children[index]->parent = this;
+		children[index]->childIndex = index;
 	}
 
 	bool isOutOfBounds(int i, int j, int k) {
@@ -127,14 +139,36 @@ public:
 	}
 
 	bool hasChild(int index) {
-		return children[index] == 0;
+		return children[index] != 0;
+	}
+
+	void remove(int i, int j, int k) {
+		VoxelChunk *chunk = getChunk(i, j, k);
+		if (chunk != 0) {
+			chunk->parent->removeChild(chunk);
+
+			while ((chunk = chunk->parent) != 0) {
+				if (chunk->children.size() == 0) {
+					chunk->parent->removeChild(chunk);
+				}
+				else {
+					break;
+				}
+			}
+		}
+	}
+
+	void removeChild(VoxelChunk *chunk) {
+		children.erase(chunk->childIndex);
+		delete chunk;
 	}
 
 	VoxelChunk(int level, int size, glm::ivec3 origin) : level(level), size(size), origin(origin) {};
 	VoxelChunk() {};
 
 	~VoxelChunk() {
-		for (VoxelChunk *chunk : children) {
+		for (auto kv : children) {
+			VoxelChunk *chunk = kv.second;
 			delete chunk;
 		}
 	};
@@ -153,7 +187,12 @@ private:
 
 		glm::ivec3 nextOrigin = glm::ivec3(origin[0] + offsetI * size, origin[1] + offsetJ * size, origin[2] + offsetK * size);
 		VoxelChunk *parent = new VoxelChunk(level + 1, size * 2, nextOrigin);
-		parent->makeChildren(data);
+
+		int childIndex = parent->getChildIndex(origin[0], origin[1], origin[2]);
+		parent->children[childIndex] = data;
+		data->parent = parent;
+		data->childIndex = childIndex;
+
 		data = parent;
 	}
 
@@ -193,4 +232,8 @@ public:
 	VoxelBSP(int size = 32) : size(size) {
 		data = new VoxelChunk(size);
 	};
+
+	void remove(int i, int j, int k) {
+		data->remove(i, j, k);
+	}
 };

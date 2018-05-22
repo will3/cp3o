@@ -13,9 +13,9 @@ class Chunks
 private:
     Coord3 get_origin(Coord3 coord) {
         return Coord3(
-                      fast_floor(coord.i, CHUNK_SIZE),
-                      fast_floor(coord.j, CHUNK_SIZE),
-                      fast_floor(coord.k, CHUNK_SIZE));
+                      fast_floor(coord.i, size),
+                      fast_floor(coord.j, size),
+                      fast_floor(coord.k, size));
     }
     std::unordered_set<Coord3> coords;
     std::unordered_map<Coord3, Chunk<T> *> map;
@@ -23,7 +23,8 @@ private:
         return x / y - (x % y < 0);
     }
 public:
-    Chunks() {};
+	int size = 32;
+    Chunks(int size = 32) : size(size) {};
     ~Chunks() {};
     T get(Coord3 coord) {
         Coord3 origin = get_origin(coord);
@@ -38,7 +39,7 @@ public:
     void set(Coord3 coord, T v) {
         Coord3 origin = get_origin(coord);
         
-        get_or_create_chunk(origin)->set(coord - origin * CHUNK_SIZE, v);
+        get_or_create_chunk(origin)->set(coord - origin * size, v);
     }
     Chunk<T>* get_or_create_chunk(Coord3 origin) {
         if (!has_chunk(origin)) {
@@ -63,5 +64,10 @@ public:
     std::unordered_set<Coord3>& get_coords() {
         return coords;
     }
+	void remove(Coord3 origin) {
+		delete map[origin];
+		map.erase(origin);
+		coords.erase(origin);
+	}
 };
 

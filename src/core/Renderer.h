@@ -10,6 +10,9 @@
 #include "Window.h"
 
 class Renderer {
+private:
+	void load();
+	void unload() { glDeleteVertexArrays(1, &VertexArrayID); }
 public:
 	GLuint VertexArrayID;
 	bool loaded = false;
@@ -26,7 +29,5 @@ public:
 
 	void render(Scene *scene, Camera *camera, RenderTarget *renderTarget);
 
-	void load();
-
-	void unload() { glDeleteVertexArrays(1, &VertexArrayID); }
+	void loadIfNeeded();
 };

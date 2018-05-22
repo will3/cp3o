@@ -2,7 +2,9 @@
 #include <vector>
 #include "GLFW/glfw3.h"
 #include <math.h>
+#include <mutex>
 
+static std::mutex tasksLock;
 static int next_id = 0;
 int get_next_id() { return ++next_id; }
 
@@ -31,6 +33,13 @@ void Runner::remove(int id) {
 }
 
 void Runner::update() {
+	tasksLock.lock();
+	for (runnerTaskType task : tasks) {
+		task();
+	}
+	tasks.clear();
+	tasksLock.unlock();
+
 	static double lastTime = glfwGetTime();
 
 	double currentTime = glfwGetTime();
@@ -63,6 +72,12 @@ void Runner::update() {
 	}
 
 	lastTime = glfwGetTime();
+}
+
+void Runner::dispatchMain(runnerTaskType task) {
+	tasksLock.lock();
+	tasks.push_back(task);
+	tasksLock.unlock();
 }
 
 bool Runner::has(int id) {

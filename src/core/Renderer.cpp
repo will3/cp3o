@@ -6,11 +6,15 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "Renderer.h"
 
-void Renderer::render(Scene * scene, Camera * camera, RenderTarget * renderTarget) {
+void Renderer::loadIfNeeded() {
 	if (!loaded) {
 		load();
 		loaded = true;
 	}
+}
+
+void Renderer::render(Scene * scene, Camera * camera, RenderTarget * renderTarget) {
+	loadIfNeeded();
 
 	if (renderTarget == 0) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);

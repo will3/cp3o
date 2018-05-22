@@ -15,16 +15,16 @@ private:
     Coord3 origin;
     Coord3 offset;
     int get_index(int i, int j, int k) {
-        return i * CHUNK_SIZE * CHUNK_SIZE + j * CHUNK_SIZE + k;
+        return i * size * size + j * size + k;
     }
 public:
 	int size = 32;
     Chunk(Coord3 origin = Coord3(), int size = 32) {
         this->origin = origin;
-        this->offset = origin * CHUNK_SIZE;
+        this->offset = origin * size;
 		this->size = size;
         
-        data.resize(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
+        data.resize(size * size * size);
     }
     ~Chunk() {}
     Coord3& get_origin() { return origin; }
@@ -34,7 +34,10 @@ public:
     glm::vec3 position;
     
     T get(Coord3 coord) {
-        int index = coord.i * CHUNK_SIZE * CHUNK_SIZE + coord.j * CHUNK_SIZE + coord.k;
+        int index = coord.i * size * size + coord.j * size + coord.k;
+		if (index < 0 || index >= data.size()) {
+			throw std::runtime_error("out of index");
+		}
         return data[index];
     }
     

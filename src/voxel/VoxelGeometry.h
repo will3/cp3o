@@ -59,6 +59,7 @@ public:
 	}
 
 	~VoxelGeometry() {
+		unload();
 		delete positions;
 		delete colors;
 		delete lightings;
