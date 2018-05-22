@@ -151,10 +151,10 @@ void Mesher::copyQuads(Mask& mask, int size, VoxelGeometry *geometry) {
 bool getSolid(Coord3& coord, VoxelChunk *chunk, VoxelBSP *bsp) {
 	int size = chunk->size;
 	auto origin = chunk->origin;
-	Coord3 offset = Coord3(origin.x, origin.y, origin.z);
 	if (coord.i < 0 || coord.i >= size ||
 		coord.j < 0 || coord.j >= size ||
 		coord.k < 0 || coord.k >= size) {
+		Coord3 offset = Coord3(origin.x, origin.y, origin.z);
 		Coord3 chunksCoord = coord + offset;
 		int v = bsp->get(chunksCoord.i, chunksCoord.j, chunksCoord.k);
 		return v > 0;
